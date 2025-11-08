@@ -14,7 +14,13 @@ import java.time.Instant;
 public class ProfileService {
     private final ProfileRepository profileRepository;
 
+
+
     public ProfileDTO createProfile(ProfileDTO profileDTO){
+
+        if(profileRepository.existsByClerkId(profileDTO.getClerkId())){
+            return updateProfile(profileDTO);
+        }
         ProfileDocument profile=ProfileDocument.builder()
                 .clerkId(profileDTO.getClerkId())
                 .email(profileDTO.getEmail())
@@ -36,5 +42,35 @@ public class ProfileService {
                 .credits(profile.getCredits())
                 .createdAt(profile.getCreatedAt())
                 .build();
+    }
+
+    public ProfileDTO updateProfile(ProfileDTO profileDTO){
+        ProfileDocument existingProfile=profileRepository.findByClerkId(profileDTO.getClerkId());
+        if(existingProfile!=null){
+            if(profileDTO.getEmail()!=null && !profileDTO.getEmail().isEmpty()){
+                existingProfile.setEmail(profileDTO.getEmail());
+            }
+            if(profileDTO.getFirstName()!=null && !profileDTO.getFirstName().isEmpty()){
+                existingProfile.setFirstName(profileDTO.getFirstName());
+            }
+            if(profileDTO.getLastName()!=null && !profileDTO.getLastName().isEmpty()){
+                existingProfile.setLastName(profileDTO.getLastName());
+            }
+            if(profileDTO.getPhotoUrl()!=null && !profileDTO.getPhotoUrl().isEmpty()){
+                existingProfile.setPhotoUrl(profileDTO.getPhotoUrl());
+            }
+            profileRepository.save(existingProfile);
+            return profileDTO.builder()
+                    .id(existingProfile.getId())
+                    .email(existingProfile.getEmail())
+                    .clerkId(existingProfile.getClerkId())
+                    .firstName(existingProfile.getFirstName())
+                    .lastName(existingProfile.getLastName())
+                    .credits(existingProfile.getCredits())
+                    .createdAt(existingProfile.getCreatedAt())
+                    .photoUrl(existingProfile.getPhotoUrl())
+                    .build();
+        }
+        return null;
     }
 }

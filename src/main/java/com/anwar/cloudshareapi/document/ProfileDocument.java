@@ -22,7 +22,6 @@ public class ProfileDocument {
     private String id;
     private String clerkId;
     @Indexed(unique = true)
-
     private String email;
     private String firstName;
     private String lastName;
