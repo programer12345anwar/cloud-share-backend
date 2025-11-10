@@ -4,7 +4,6 @@ import com.anwar.cloudshareapi.document.ProfileDocument;
 import com.anwar.cloudshareapi.dto.ProfileDTO;
 import com.anwar.cloudshareapi.repository.ProfileRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -32,7 +31,7 @@ public class ProfileService {
                 .build();
         profile=profileRepository.save(profile);
 
-        return profileDTO.builder()
+        return ProfileDTO.builder()
                 .id(profile.getId())
                 .clerkId(profile.getClerkId())
                 .email(profile.getEmail())
@@ -47,7 +46,7 @@ public class ProfileService {
     public ProfileDTO updateProfile(ProfileDTO profileDTO){
         ProfileDocument existingProfile=profileRepository.findByClerkId(profileDTO.getClerkId());
         if(existingProfile!=null){
-            if(profileDTO.getEmail()!=null && !profileDTO.getEmail().isEmpty()){
+            if(profileDTO.getEmail()!=null && !profileDTO.getEmail().isEmpty()){  //email = null, email = ""
                 existingProfile.setEmail(profileDTO.getEmail());
             }
             if(profileDTO.getFirstName()!=null && !profileDTO.getFirstName().isEmpty()){
@@ -60,7 +59,7 @@ public class ProfileService {
                 existingProfile.setPhotoUrl(profileDTO.getPhotoUrl());
             }
             profileRepository.save(existingProfile);
-            return profileDTO.builder()
+            return ProfileDTO.builder()//Creates and returns a builder object.
                     .id(existingProfile.getId())
                     .email(existingProfile.getEmail())
                     .clerkId(existingProfile.getClerkId())
@@ -69,8 +68,20 @@ public class ProfileService {
                     .credits(existingProfile.getCredits())
                     .createdAt(existingProfile.getCreatedAt())
                     .photoUrl(existingProfile.getPhotoUrl())
-                    .build();
+                    .build();//constructs the ProfileDTO object.
         }
         return null;
     }
+
+    public Boolean existsByClerkId(String clerkId){
+        return profileRepository.existsByClerkId(clerkId);
+    }
+
+    public void deleteProfile(String clerkId) {
+        ProfileDocument existingProfile = profileRepository.findByClerkId(clerkId);
+        if (existingProfile != null) {
+            profileRepository.delete(existingProfile);
+        }
+    }
+
 }
