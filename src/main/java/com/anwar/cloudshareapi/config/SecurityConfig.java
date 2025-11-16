@@ -23,39 +23,39 @@ import java.util.List;
 public class SecurityConfig {
 
     private final ClerkJwtAuthFilter clerkJwtAuthFilter;
+
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
-        httpSecurity
-                .cors(Customizer.withDefaults()) //Enables Cross-Origin Resource Sharing (if needed for frontend calls).
-                .csrf(AbstractHttpConfigurer::disable) //CSRF disabled → suitable for REST APIs.
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .cors(Customizer.withDefaults())
+                .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/webhooks/**").permitAll()   // This endpoint is public
-                        .anyRequest().authenticated()                  // All others need authentication
+                        .requestMatchers(
+                                "/webhooks/**",
+                                "/files/public/**",
+                                "/files/download/**"
+                        ).permitAll()
+                        .anyRequest().authenticated()
                 )
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS) //Server will not store session — required for JWT.
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .addFilterBefore(clerkJwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
-
-        return httpSecurity.build();
+        return http.build();
     }
 
-    public CorsFilter corsFilter(){
-        return new CorsFilter(corsConfigurationSource());
+
+    @Bean
+    public CorsFilter corsFilter() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(List.of("http://localhost:5173")); // your React app
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        config.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return new CorsFilter(source);
     }
-
-        private UrlBasedCorsConfigurationSource corsConfigurationSource(){
-            CorsConfiguration config=new CorsConfiguration();
-            config.setAllowedOrigins(List.of("*"));
-            config.setAllowedOrigins(List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
-            config.setAllowedOrigins(List.of("Authorization","Content-Type"));
-            config.setAllowCredentials(true);
-
-            UrlBasedCorsConfigurationSource source=new UrlBasedCorsConfigurationSource();
-            source.registerCorsConfiguration("/**",config);
-            return source;
-        }
-
-
 }

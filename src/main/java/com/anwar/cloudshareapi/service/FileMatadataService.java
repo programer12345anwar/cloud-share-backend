@@ -17,6 +17,7 @@ import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -39,7 +40,7 @@ public class FileMatadataService {
         Files.createDirectories(uploadPath);
 
         for(MultipartFile file:files){
-            String fileName=UUID.randomUUID()+"."+ StringUtils.getFilename(file.getOriginalFilename());
+            String fileName=UUID.randomUUID()+"."+ StringUtils.getFilenameExtension(file.getOriginalFilename());
             Path targetLocation=uploadPath.resolve(fileName);
             Files.copy(file.getInputStream(),targetLocation, StandardCopyOption.REPLACE_EXISTING);
 
@@ -71,4 +72,53 @@ public class FileMatadataService {
                 .uploadedAt(fileMetadataDocument.getUploadedAt())
                 .build();
     }
+
+    public List<FileMatadataDTO> getFiles(){
+        ProfileDocument currentProfile=profileService.getCurrentProfile();
+        List<FileMetadataDocument> files=fileMetadataRepository.findByClerkId(currentProfile.getClerkId());
+        return files.stream().map(this::mapToDTO).collect(Collectors.toList());
+    }
+
+    public FileMatadataDTO getPublicFile(String id){
+        Optional<FileMetadataDocument> fileOptional=fileMetadataRepository.findById(id);
+        if(fileOptional.isEmpty() || !fileOptional.get().getIsPublic()){
+            throw new RuntimeException("Unable to get the file");
+        }
+        FileMetadataDocument document=fileOptional.get();
+        return mapToDTO(document);
+    }
+
+    public FileMatadataDTO getDownloadableFile(String id){
+        FileMetadataDocument file=fileMetadataRepository.findById(id).orElseThrow(()->new RuntimeException("File not found"));
+        return mapToDTO(file);
+    }
+
+    public void deleteFile(String id) {
+        try {
+            ProfileDocument currentProfile = profileService.getCurrentProfile();
+
+            // fetch directly (not Optional)
+            FileMetadataDocument file = fileMetadataRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("File not found"));
+
+            if (!file.getClerkId().equals(currentProfile.getClerkId())) {
+                throw new RuntimeException("File does not belong to the current user");
+            }
+
+            Path filePath = Paths.get(file.getFileLocation());
+            Files.deleteIfExists(filePath);
+
+            fileMetadataRepository.deleteById(id);
+        } catch (Exception e) {
+            throw new RuntimeException("Error deleting the file", e);
+        }
+    }
+
+    public FileMatadataDTO togglePublic(String id){
+        FileMetadataDocument file=fileMetadataRepository.findById(id).orElseThrow(()->new RuntimeException("File not found"));
+        file.setIsPublic(!file.getIsPublic());
+        fileMetadataRepository.save(file);
+        return mapToDTO(file);
+    }
+
 }

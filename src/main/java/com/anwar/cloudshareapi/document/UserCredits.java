@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-@Document(collation = "user-credits")
+@Document(collection = "user-credits")
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -17,6 +17,6 @@ public class UserCredits {
     private String id;
     private String clerkId;
     private Integer credits;
-    private String plan;//BASIC, PREMIUM, ULTIMATE
+    private String plan; // BASIC, PREMIUM, ULTIMATE
 }
 
