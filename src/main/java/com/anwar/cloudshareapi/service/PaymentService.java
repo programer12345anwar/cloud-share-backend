@@ -136,13 +136,22 @@ public class PaymentService {
         }
     }
 
-    private String generateHmaSha256Signature(String message, String secret) throws Exception {
-        SecretKeySpec secretKeySpec = new SecretKeySpec(secret.getBytes(), "HmacSHA256");
-        Mac mac = Mac.getInstance("HmacSHA256");
-        mac.init(secretKeySpec);
-        byte[] hash = mac.doFinal(message.getBytes());
-        return Base64.getEncoder().encodeToString(hash);
+    private String generateHmaSha256Signature(String data, String secret) throws Exception {
+        Mac sha256_HMAC = Mac.getInstance("HmacSHA256");
+        SecretKeySpec secret_key = new SecretKeySpec(secret.getBytes(), "HmacSHA256");
+
+        sha256_HMAC.init(secret_key);
+
+        byte[] hash = sha256_HMAC.doFinal(data.getBytes());
+
+        // Convert to HEX string (Razorpay format)
+        StringBuilder hexString = new StringBuilder();
+        for (byte b : hash) {
+            hexString.append(String.format("%02x", b));
+        }
+        return hexString.toString();
     }
+
 
     private void updateTransactionStatus(String razorpayOrderId, String status, String razorpayPaymentId, Integer creditsToAdd) {
         paymentTransactionRepository.findAll().stream()
