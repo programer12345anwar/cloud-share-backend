@@ -12,7 +12,10 @@ Built using Spring Boot + React + Microservices architecture, this application i
 
 🔗 https://github.com/programer12345anwar/cloud-share-web-app
 
+
+
 🚀 Key Features
+
 ✅ Authentication & Security
 
 Clerk authentication (Frontend)
@@ -23,7 +26,9 @@ Secure API access
 
 Token validation & request filtering
 
-Role-based access (optional)
+Role-based access 
+
+
 
 ✅ File Management
 
@@ -37,6 +42,8 @@ Cloud-based file storage
 
 Metadata handling
 
+
+
 ✅ Payment Integration
 
 Razorpay payment gateway
@@ -47,6 +54,8 @@ Payment verification APIs
 
 Secure transaction handling
 
+
+
 ✅ API Management
 
 Swagger & OpenAPI documentation
@@ -54,6 +63,8 @@ Swagger & OpenAPI documentation
 Versioned REST APIs
 
 Clean controller architecture
+
+
 
 ✅ Architecture
 
@@ -64,6 +75,8 @@ Stateless APIs
 Separation of concerns
 
 Scalable design approach
+
+
 
 🛠️ Tech Stack
 Backend
@@ -78,7 +91,7 @@ Razorpay API
 
 Swagger (OpenAPI)
 
-PostgreSQL / MongoDB
+MongoDB
 
 Maven
 
@@ -98,6 +111,7 @@ Razorpay Checkout UI
 
 Responsive design
 
+
 🔧 Backend Setup
 ✅ Clone Repository
 git clone https://github.com/programer12345anwar/cloud-share-backend.git
@@ -107,13 +121,6 @@ cd cloud-share-backend
 
 Create a .env file in backend root directory:
 
-DB_URL=
-DB_USERNAME=
-DB_PASSWORD=
-JWT_SECRET=
-IMAGEKIT_PUBLIC_KEY=
-IMAGEKIT_PRIVATE_KEY=
-RABBITMQ_HOST=
 RAZORPAY_KEY_ID=
 RAZORPAY_KEY_SECRET=
 
@@ -125,6 +132,8 @@ mvn spring-boot:run
 Once server is running, open:
 
 http://localhost:8080/swagger-ui.html
+
+
 
 🎨 Frontend Setup
 ✅ Clone Repository
