@@ -30,11 +30,22 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
+                        // Allow Swagger/OpenAPI endpoints
+                        .requestMatchers(
+                                "/swagger-ui.html",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**"
+                        ).permitAll()
+
+                        // Public/webhook/download paths
                         .requestMatchers(
                                 "/webhooks/**",
                                 "/files/public/**",
-                                "/files/download/**"
+                                "/files/download/**",
+                                "/public/**"
                         ).permitAll()
+
+                        // everything else requires auth
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session ->

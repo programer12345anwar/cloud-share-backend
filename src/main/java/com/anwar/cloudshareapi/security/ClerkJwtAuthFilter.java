@@ -36,22 +36,165 @@ public class ClerkJwtAuthFilter extends OncePerRequestFilter {
                                     FilterChain filterChain)
             throws IOException, ServletException {
 
-        System.out.println("🔍 ClerkJwtAuthFilter triggered for: " + request.getRequestURI());
+        String path = request.getRequestURI();
+        System.out.println("🔍 ClerkJwtAuthFilter triggered for: " + path);
 
+        // =====================================================
+        // 1️⃣ Allow Swagger URLs (including context-path)
+        // =====================================================
+        if (path.equals("/api/v1.0/swagger-ui.html") ||
+                path.startsWith("/api/v1.0/swagger-ui") ||
+                path.startsWith("/api/v1.0/v3/api-docs")) {
 
-        if (request.getRequestURI().contains("/webhooks") ||
-                request.getRequestURI().contains("/public") ||
-                request.getRequestURI().contains("/download")) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        String authHeader = request.getHeader("Authorization");
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Missing or invalid Authorization header");
+        // =====================================================
+        // 2️⃣ Allow Public/Webhook/Download endpoints
+        // =====================================================
+        if (path.contains("/webhooks") ||
+                path.contains("/public") ||
+                path.contains("/download") ||
+                path.contains("/files/public") ||
+                path.contains("/files/download")) {
+
+            filterChain.doFilter(request, response);
             return;
         }
 
+        // =====================================================
+        // 3️⃣ JWT Authentication for everything else
+        // =====================================================
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN,
+                    "Missing or invalid Authorization header");
+            return;
+        }
+
+        try {
+            String token = authHeader.substring(7);
+            String[] chunks = token.split("\\.");
+
+            if (chunks.length < 3) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN,
+                        "Invalid JWT token format");
+                return;
+            }
+
+            String headerJson = decodeBase64UrlSafe(chunks[0]);
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode headerNode = mapper.readTree(headerJson);
+
+            if (!headerNode.has("kid")) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN,
+                        "Token header missing 'kid'");
+                return;
+            }
+
+            String kid = headerNode.get("kid").asText();
+            PublicKey publicKey = jwksProvider.getPublicKey(kid);
+
+            if (publicKey == null) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN,
+                        "Public key not found for kid: " + kid);
+                return;
+            }
+
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(publicKey)
+                    .requireIssuer(clerkIssuer)
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+
+            String clerkId = claims.getSubject();
+
+            UsernamePasswordAuthenticationToken authenticationToken =
+                    new UsernamePasswordAuthenticationToken(
+                            clerkId,
+                            null,
+                            Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))
+                    );
+
+            SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+            filterChain.doFilter(request, response);
+
+        } catch (Exception e) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN,
+                    "Invalid JWT token: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+
+    private String decodeBase64UrlSafe(String base64Url) {
+        int padding = 4 - (base64Url.length() % 4);
+        if (padding > 0 && padding < 4) {
+            base64Url += "=".repeat(padding);
+        }
+        return new String(Base64.getUrlDecoder().decode(base64Url));
+    }
+}
+
+
+
+
+//package com.anwar.cloudshareapi.security;
+//
+//import com.fasterxml.jackson.databind.JsonNode;
+//import com.fasterxml.jackson.databind.ObjectMapper;
+//import io.jsonwebtoken.Claims;
+//import io.jsonwebtoken.Jwts;
+//import jakarta.servlet.FilterChain;
+//import jakarta.servlet.ServletException;
+//import jakarta.servlet.http.HttpServletRequest;
+//import jakarta.servlet.http.HttpServletResponse;
+//import lombok.RequiredArgsConstructor;
+//import org.springframework.beans.factory.annotation.Value;
+//import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+//import org.springframework.security.core.authority.SimpleGrantedAuthority;
+//import org.springframework.security.core.context.SecurityContextHolder;
+//import org.springframework.stereotype.Component;
+//import org.springframework.web.filter.OncePerRequestFilter;
+//
+//import java.io.IOException;
+//import java.security.PublicKey;
+//import java.util.Base64;
+//import java.util.Collections;
+//
+//@Component
+//@RequiredArgsConstructor
+//public class ClerkJwtAuthFilter extends OncePerRequestFilter {
+//
+//    @Value("${clerk.issuer}")
+//    private String clerkIssuer;
+//
+//    private final ClerkJwksProvider jwksProvider;
+//
+//    @Override
+//    protected void doFilterInternal(HttpServletRequest request,
+//                                    HttpServletResponse response,
+//                                    FilterChain filterChain)
+//            throws IOException, ServletException {
+//
+//        System.out.println("🔍 ClerkJwtAuthFilter triggered for: " + request.getRequestURI());
+//
+//
+//        if (request.getRequestURI().contains("/webhooks") ||
+//                request.getRequestURI().contains("/public") ||
+//                request.getRequestURI().contains("/download")) {
+//            filterChain.doFilter(request, response);
+//            return;
+//        }
+//
+//        String authHeader = request.getHeader("Authorization");
+//        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+//            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Missing or invalid Authorization header");
+//            return;
+//        }
+//
 //        try {
 //            String token = authHeader.substring(7);
 //            String[] chunks = token.split("\\.");
@@ -61,8 +204,7 @@ public class ClerkJwtAuthFilter extends OncePerRequestFilter {
 //                return;
 //            }
 //
-//            // Decode header
-//            String headerJson = new String(Base64.getUrlDecoder().decode(chunks[0]));
+//            String headerJson = decodeBase64UrlSafe(chunks[0]);
 //            ObjectMapper mapper = new ObjectMapper();
 //            JsonNode headerNode = mapper.readTree(headerJson);
 //
@@ -99,67 +241,18 @@ public class ClerkJwtAuthFilter extends OncePerRequestFilter {
 //
 //        } catch (Exception e) {
 //            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Invalid JWT token: " + e.getMessage());
-//            e.printStackTrace(); // log it in console
-//
+//            e.printStackTrace();
 //        }
-
-        try {
-            String token = authHeader.substring(7);
-            String[] chunks = token.split("\\.");
-
-            if (chunks.length < 3) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Invalid JWT token format");
-                return;
-            }
-
-            String headerJson = decodeBase64UrlSafe(chunks[0]);
-            ObjectMapper mapper = new ObjectMapper();
-            JsonNode headerNode = mapper.readTree(headerJson);
-
-            if (!headerNode.has("kid")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Token header missing 'kid'");
-                return;
-            }
-
-            String kid = headerNode.get("kid").asText();
-            PublicKey publicKey = jwksProvider.getPublicKey(kid);
-
-            if (publicKey == null) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Public key not found for kid: " + kid);
-                return;
-            }
-
-            Claims claims = Jwts.parserBuilder()
-                    .setSigningKey(publicKey)
-                    .requireIssuer(clerkIssuer)
-                    .build()
-                    .parseClaimsJws(token)
-                    .getBody();
-
-            String clerkId = claims.getSubject();
-
-            UsernamePasswordAuthenticationToken authenticationToken =
-                    new UsernamePasswordAuthenticationToken(
-                            clerkId, null,
-                            Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))
-                    );
-
-            SecurityContextHolder.getContext().setAuthentication(authenticationToken);
-            filterChain.doFilter(request, response);
-
-        } catch (Exception e) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Invalid JWT token: " + e.getMessage());
-            e.printStackTrace();
-        }
-
-    }
-
-    private String decodeBase64UrlSafe(String base64Url) {
-        int padding = 4 - (base64Url.length() % 4);
-        if (padding > 0 && padding < 4) {
-            base64Url += "=".repeat(padding);
-        }
-        return new String(Base64.getUrlDecoder().decode(base64Url));
-    }
-
-}
+//
+//    }
+//
+//    private String decodeBase64UrlSafe(String base64Url) {
+//        int padding = 4 - (base64Url.length() % 4);
+//        if (padding > 0 && padding < 4) {
+//            base64Url += "=".repeat(padding);
+//        }
+//        return new String(Base64.getUrlDecoder().decode(base64Url));
+//    }
+//
+//
+//}

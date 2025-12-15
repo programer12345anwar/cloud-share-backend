@@ -34,8 +34,8 @@ public class PaymentService {
 
     public PaymentDTO createOrder(PaymentDTO paymentDTO) {
         try {
-            System.out.println("🔑 Razorpay Key ID = " + razorpayKeyId);
-            System.out.println("🔑 Razorpay Secret = " + razorpayKeySecret);
+//            System.out.println("🔑 Razorpay Key ID = " + razorpayKeyId);
+//            System.out.println("🔑 Razorpay Secret = " + razorpayKeySecret);
             ProfileDocument currentProfile = profileService.getCurrentProfile();
             String clerkId = currentProfile.getClerkId();
 
