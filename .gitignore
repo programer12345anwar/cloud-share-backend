@@ -34,3 +34,8 @@ build/
 
 #environment
 .env
+CLOUDINARY_IMPLEMENTATION_SUMMARY.md
+CLOUDINARY_SETUP.md
+RAZORPAY_WEBHOOK_SETUP.md
+.env.example
+
