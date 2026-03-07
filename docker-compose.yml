@@ -1,0 +1,91 @@
+# docker-compose.yml - Local development environment
+# Run all services locally with: docker-compose up
+
+version: '3.9'
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:7.0
+    container_name: cloudshare-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: rootpassword
+      MONGO_INITDB_DATABASE: cloudshare-db
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cloudshare-network
+
+  # Spring Boot Backend
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cloudshare-backend
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    environment:
+      # Application
+      SPRING_APPLICATION_NAME: cloudshareapi
+      SERVER_PORT: 8080
+      SERVER_SERVLET_CONTEXT_PATH: /
+
+      # MongoDB - Use service name for internal networking
+      SPRING_DATA_MONGODB_URI: mongodb://root:rootpassword@mongodb:27017/cloudshare-db?authSource=admin&retryWrites=true&w=majority
+      SPRING_DATA_MONGODB_AUTO_INDEX_CREATION: "true"
+
+      # File Upload Limits
+      SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE: 50MB
+      SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE: 50MB
+
+      # Clerk Authentication
+      CLERK_ISSUER: ${CLERK_ISSUER}
+      CLERK_JWKS_URL: ${CLERK_JWKS_URL}
+      CLERK_WEBHOOK_SECRET: ${CLERK_WEBHOOK_SECRET}
+
+      # Razorpay Payment Gateway
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID}
+      RAZORPAY_SECRET_KEY: ${RAZORPAY_SECRET_KEY}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET}
+
+      # Cloudinary Cloud Storage
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
+      CLOUDINARY_UPLOAD_FOLDER: cloudshare
+
+      # Swagger Documentation
+      SPRINGDOC_SWAGGER_UI_PATH: /swagger-ui.html
+      SPRINGDOC_API_DOCS_PATH: /v3/api-docs
+
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/v3/api-docs"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - cloudshare-network
+    restart: unless-stopped
+    # Uncomment for debugging
+    # stdin_open: true
+    # tty: true
+
+volumes:
+  mongodb_data:
+    driver: local
+
+networks:
+  cloudshare-network:
+    driver: bridge

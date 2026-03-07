@@ -30,6 +30,7 @@ public class FileController {
 
     /**
      * Upload files to Cloudinary
+     * 
      * @param files Array of files to upload
      * @return Upload response with file metadata and remaining credits
      */
@@ -109,4 +110,3 @@ public class FileController {
         return ResponseEntity.ok(file);
     }
 }
-

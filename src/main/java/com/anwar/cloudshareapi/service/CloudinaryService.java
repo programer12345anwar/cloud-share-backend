@@ -45,14 +45,13 @@ public class CloudinaryService {
         return new Cloudinary(ObjectUtils.asMap(
                 "cloud_name", cloudName,
                 "api_key", apiKey,
-                "api_secret", apiSecret
-        ));
+                "api_secret", apiSecret));
     }
 
     /**
      * Upload a file to Cloudinary
      * 
-     * @param file The MultipartFile to upload
+     * @param file    The MultipartFile to upload
      * @param clerkId User's clerk ID (used for file organization)
      * @return Map containing upload response with secureUrl and publicId
      * @throws IOException if file upload fails
@@ -103,7 +102,7 @@ public class CloudinaryService {
     public void deleteFile(String publicId) throws IOException {
         try {
             if (publicId == null || publicId.trim().isEmpty()) {
-                System.warn("⚠️  Public ID is empty, skipping deletion");
+                System.out.println("⚠️  Public ID is empty, skipping deletion");
                 return;
             }
 
@@ -158,8 +157,7 @@ public class CloudinaryService {
         try {
             Cloudinary cloudinary = getCloudinary();
             Map<String, Object> result = cloudinary.api().resource(publicId, ObjectUtils.asMap(
-                    "type", "upload"
-            ));
+                    "type", "upload"));
             return result != null && result.containsKey("public_id");
         } catch (Exception e) {
             // Resource not found or API error

@@ -1,0 +1,65 @@
+# .dockerignore - Files to exclude from Docker build context
+# This speeds up the build process by not copying unnecessary files
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE and Editor
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+*.iml
+*.iws
+*.ipr
+
+# Maven
+target/
+.m2/
+*.jar
+*.war
+
+# Documentation
+README.md
+HELP.md
+*.md
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# OS
+Thumbs.db
+.DS_Store
+
+# CI/CD
+.github
+.gitlab-ci.yml
+.circleci
+azure-pipelines.yml
+
+# Docker
+docker-compose.yml
+docker-compose.*.yml
+Dockerfile
+
+# Node/Frontend (if monorepo)
+node_modules/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+dist/
+.next
+.nuxt
+
+# Misc
+.cache
+.venv
+venv/
+__pycache__

@@ -18,13 +18,13 @@ public class FileMatadataDTO {
     private Long size;
     private String clerkId;
     private Boolean isPublic;
-    
+
     // fileLocation stores Cloudinary secure URL
     private String fileLocation;
-    
+
     // Cloudinary-specific metadata
     private String cloudinaryPublicId;
     private String cloudinaryUrl;
-    
+
     private LocalDateTime uploadedAt;
 }

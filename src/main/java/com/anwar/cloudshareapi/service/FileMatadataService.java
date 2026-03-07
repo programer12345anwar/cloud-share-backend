@@ -68,10 +68,10 @@ public class FileMatadataService {
 
                 // Save metadata to MongoDB
                 FileMetadataDocument savedFile = fileMetadataRepository.save(fileMetadata);
-                
+
                 // Consume 1 credit per file
                 userCreditsService.consumeCredit();
-                
+
                 savedFiles.add(savedFile);
 
                 System.out.println("✅ File saved to database - Name: " + file.getOriginalFilename());
@@ -180,4 +180,3 @@ public class FileMatadataService {
         return mapToDTO(file);
     }
 }
-
