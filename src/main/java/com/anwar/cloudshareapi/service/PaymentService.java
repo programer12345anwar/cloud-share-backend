@@ -167,4 +167,114 @@ public class PaymentService {
                 })
                 .orElse(null);
     }
+
+    /**
+     * Webhook handler: Called when Razorpay confirms payment.authorized event
+     * Automatically updates transaction and adds credits
+     */
+    public void handleWebhookPaymentAuthorized(String orderId, String paymentId) {
+        try {
+            // Find transaction by order ID
+            PaymentTransaction transaction = paymentTransactionRepository.findAll().stream()
+                    .filter(t -> t.getOrderId() != null && t.getOrderId().equals(orderId))
+                    .findFirst()
+                    .orElse(null);
+
+            if (transaction == null) {
+                System.err.println("⚠️  Transaction not found for order: " + orderId);
+                return;
+            }
+
+            // Prevent duplicate processing (idempotency check)
+            if (transaction.getStatus() != null && 
+                (transaction.getStatus().equals("SUCCESS") || transaction.getStatus().equals("PROCESSING"))) {
+                System.out.println("⏭️  Transaction already processed for order: " + orderId);
+                return;
+            }
+
+            // Mark as processing to prevent race conditions
+            transaction.setStatus("PROCESSING");
+            transaction.setPaymentId(paymentId);
+            paymentTransactionRepository.save(transaction);
+
+            // Add credits based on plan
+            int creditsToAdd = 0;
+            String plan = "BASIC";
+
+            switch (transaction.getPlanId()) {
+                case "premium":
+                    creditsToAdd = 500;
+                    plan = "PREMIUM";
+                    break;
+                case "ultimate":
+                    creditsToAdd = 5000;
+                    plan = "ULTIMATE";
+                    break;
+            }
+
+            if (creditsToAdd > 0) {
+                // Add credits to user
+                userCreditsService.addCredits(transaction.getClerkId(), creditsToAdd, plan);
+
+                // Update transaction as SUCCESS
+                transaction.setStatus("SUCCESS");
+                transaction.setCreditsAdded(creditsToAdd);
+                paymentTransactionRepository.save(transaction);
+
+                System.out.println("✅ Payment processed via webhook - Order: " + orderId +
+                        ", Credits Added: " + creditsToAdd + ", User: " + transaction.getClerkId());
+            } else {
+                transaction.setStatus("FAILED");
+                transaction.setPaymentId(paymentId);
+                paymentTransactionRepository.save(transaction);
+                System.err.println("❌ Invalid plan ID for order: " + orderId);
+            }
+
+        } catch (Exception e) {
+            System.err.println("❌ Error processing webhook payment: " + e.getMessage());
+            // Mark transaction as ERROR but don't throw to prevent webhook retry loops
+            try {
+                updateTransactionStatus(orderId, "ERROR", paymentId, null);
+            } catch (Exception ex) {
+                System.err.println("Failed to mark transaction as ERROR: " + ex.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Webhook handler: Called when Razorpay confirms payment.failed event
+     * Updates transaction status to FAILED
+     */
+    public void handleWebhookPaymentFailed(String orderId, String paymentId) {
+        try {
+            // Find transaction by order ID
+            PaymentTransaction transaction = paymentTransactionRepository.findAll().stream()
+                    .filter(t -> t.getOrderId() != null && t.getOrderId().equals(orderId))
+                    .findFirst()
+                    .orElse(null);
+
+            if (transaction == null) {
+                System.err.println("⚠️  Transaction not found for order: " + orderId);
+                return;
+            }
+
+            // Prevent duplicate processing
+            if (transaction.getStatus() != null && 
+                (transaction.getStatus().equals("FAILED") || transaction.getStatus().equals("SUCCESS"))) {
+                System.out.println("⏭️  Transaction already updated for order: " + orderId);
+                return;
+            }
+
+            // Update transaction as FAILED
+            transaction.setStatus("FAILED");
+            transaction.setPaymentId(paymentId);
+            paymentTransactionRepository.save(transaction);
+
+            System.out.println("❌ Payment failed via webhook - Order: " + orderId +
+                    ", Payment: " + paymentId + ", User: " + transaction.getClerkId());
+
+        } catch (Exception e) {
+            System.err.println("❌ Error processing webhook payment failure: " + e.getMessage());
+        }
+    }
 }
