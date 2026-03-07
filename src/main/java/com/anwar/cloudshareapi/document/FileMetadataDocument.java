@@ -22,6 +22,13 @@ public class FileMetadataDocument {
     private Long size;
     private String clerkId;
     private Boolean isPublic;
+    
+    // fileLocation now stores Cloudinary secure URL instead of local path
     private String fileLocation;
+    
+    // Cloudinary-specific identifiers for file management
+    private String cloudinaryPublicId; // Public ID needed for deletion and transformations
+    private String cloudinaryUrl; // Direct HTTPS URL to the file
+    
     private LocalDateTime uploadedAt;
 }
