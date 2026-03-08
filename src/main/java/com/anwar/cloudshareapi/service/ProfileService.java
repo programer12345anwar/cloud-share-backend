@@ -91,6 +91,24 @@ public class ProfileService {
             throw new UsernameNotFoundException("User not authenticated");
         }
         String clerkId=SecurityContextHolder.getContext().getAuthentication().getName();
-        return profileRepository.findByClerkId(clerkId);
+        
+        // Try to find existing profile
+        ProfileDocument profile = profileRepository.findByClerkId(clerkId);
+        
+        // If profile doesn't exist, create it with basic info
+        if(profile == null){
+            profile = ProfileDocument.builder()
+                    .clerkId(clerkId)
+                    .email(clerkId + "@clerk.local") // Placeholder email, will be updated by webhook
+                    .firstName("User")
+                    .lastName("")
+                    .photoUrl(null)
+                    .credits(5)
+                    .createdAt(Instant.now())
+                    .build();
+            profile = profileRepository.save(profile);
+        }
+        
+        return profile;
     }
 }
