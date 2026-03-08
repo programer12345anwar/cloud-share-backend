@@ -48,6 +48,12 @@ public class FileMatadataService {
 
         // Upload each file to Cloudinary
         for (MultipartFile file : files) {
+            // Validate file is not empty
+            if (file.isEmpty() || file.getSize() == 0) {
+                System.err.println("⚠️ Skipping empty file: " + file.getOriginalFilename());
+                continue;
+            }
+
             try {
                 // Upload to Cloudinary and get response
                 Map<String, Object> uploadResponse = cloudinaryService.uploadFile(file, currentProfile.getClerkId());

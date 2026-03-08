@@ -15,14 +15,12 @@ import java.time.Instant;
 public class ProfileService {
     private final ProfileRepository profileRepository;
 
+    public ProfileDTO createProfile(ProfileDTO profileDTO) {
 
-
-    public ProfileDTO createProfile(ProfileDTO profileDTO){
-
-        if(profileRepository.existsByClerkId(profileDTO.getClerkId())){
+        if (profileRepository.existsByClerkId(profileDTO.getClerkId())) {
             return updateProfile(profileDTO);
         }
-        ProfileDocument profile=ProfileDocument.builder()
+        ProfileDocument profile = ProfileDocument.builder()
                 .clerkId(profileDTO.getClerkId())
                 .email(profileDTO.getEmail())
                 .firstName(profileDTO.getFirstName())
@@ -31,7 +29,7 @@ public class ProfileService {
                 .credits(5)
                 .createdAt(Instant.now())
                 .build();
-        profile=profileRepository.save(profile);
+        profile = profileRepository.save(profile);
 
         return ProfileDTO.builder()
                 .id(profile.getId())
@@ -45,23 +43,23 @@ public class ProfileService {
                 .build();
     }
 
-    public ProfileDTO updateProfile(ProfileDTO profileDTO){
-        ProfileDocument existingProfile=profileRepository.findByClerkId(profileDTO.getClerkId());
-        if(existingProfile!=null){
-            if(profileDTO.getEmail()!=null && !profileDTO.getEmail().isEmpty()){  //email = null, email = ""
+    public ProfileDTO updateProfile(ProfileDTO profileDTO) {
+        ProfileDocument existingProfile = profileRepository.findByClerkId(profileDTO.getClerkId());
+        if (existingProfile != null) {
+            if (profileDTO.getEmail() != null && !profileDTO.getEmail().isEmpty()) { // email = null, email = ""
                 existingProfile.setEmail(profileDTO.getEmail());
             }
-            if(profileDTO.getFirstName()!=null && !profileDTO.getFirstName().isEmpty()){
+            if (profileDTO.getFirstName() != null && !profileDTO.getFirstName().isEmpty()) {
                 existingProfile.setFirstName(profileDTO.getFirstName());
             }
-            if(profileDTO.getLastName()!=null && !profileDTO.getLastName().isEmpty()){
+            if (profileDTO.getLastName() != null && !profileDTO.getLastName().isEmpty()) {
                 existingProfile.setLastName(profileDTO.getLastName());
             }
-            if(profileDTO.getPhotoUrl()!=null && !profileDTO.getPhotoUrl().isEmpty()){
+            if (profileDTO.getPhotoUrl() != null && !profileDTO.getPhotoUrl().isEmpty()) {
                 existingProfile.setPhotoUrl(profileDTO.getPhotoUrl());
             }
             profileRepository.save(existingProfile);
-            return ProfileDTO.builder()//Creates and returns a builder object.
+            return ProfileDTO.builder()// Creates and returns a builder object.
                     .id(existingProfile.getId())
                     .email(existingProfile.getEmail())
                     .clerkId(existingProfile.getClerkId())
@@ -70,12 +68,12 @@ public class ProfileService {
                     .credits(existingProfile.getCredits())
                     .createdAt(existingProfile.getCreatedAt())
                     .photoUrl(existingProfile.getPhotoUrl())
-                    .build();//constructs the ProfileDTO object.
+                    .build();// constructs the ProfileDTO object.
         }
         return null;
     }
 
-    public Boolean existsByClerkId(String clerkId){
+    public Boolean existsByClerkId(String clerkId) {
         return profileRepository.existsByClerkId(clerkId);
     }
 
@@ -86,29 +84,37 @@ public class ProfileService {
         }
     }
 
-    public ProfileDocument getCurrentProfile(){
-        if(SecurityContextHolder.getContext().getAuthentication()==null){
+    public ProfileDocument getCurrentProfile() {
+        if (SecurityContextHolder.getContext().getAuthentication() == null) {
             throw new UsernameNotFoundException("User not authenticated");
         }
-        String clerkId=SecurityContextHolder.getContext().getAuthentication().getName();
-        
+        String clerkId = SecurityContextHolder.getContext().getAuthentication().getName();
+
         // Try to find existing profile
         ProfileDocument profile = profileRepository.findByClerkId(clerkId);
-        
+
         // If profile doesn't exist, create it with basic info
-        if(profile == null){
-            profile = ProfileDocument.builder()
-                    .clerkId(clerkId)
-                    .email(clerkId + "@clerk.local") // Placeholder email, will be updated by webhook
-                    .firstName("User")
-                    .lastName("")
-                    .photoUrl(null)
-                    .credits(5)
-                    .createdAt(Instant.now())
-                    .build();
-            profile = profileRepository.save(profile);
+        if (profile == null) {
+            try {
+                profile = ProfileDocument.builder()
+                        .clerkId(clerkId)
+                        .email(clerkId + "@clerk.local") // Placeholder email, will be updated by webhook
+                        .firstName("User")
+                        .lastName("")
+                        .photoUrl(null)
+                        .credits(5)
+                        .createdAt(Instant.now())
+                        .build();
+                profile = profileRepository.save(profile);
+            } catch (Exception e) {
+                // If profile creation fails due to race condition, fetch it again
+                profile = profileRepository.findByClerkId(clerkId);
+                if (profile == null) {
+                    throw new RuntimeException("Failed to create or retrieve user profile", e);
+                }
+            }
         }
-        
+
         return profile;
     }
 }

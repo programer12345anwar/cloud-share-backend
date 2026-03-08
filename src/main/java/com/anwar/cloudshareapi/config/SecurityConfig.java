@@ -22,62 +22,59 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final ClerkJwtAuthFilter clerkJwtAuthFilter;
+        private final ClerkJwtAuthFilter clerkJwtAuthFilter;
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .cors(Customizer.withDefaults())
-                .csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(auth -> auth
-                        // Allow Swagger/OpenAPI endpoints
-                        .requestMatchers(
-                                "/swagger-ui.html",
-                                "/swagger-ui/**",
-                                "/v3/api-docs/**"
-                        ).permitAll()
+        @Bean
+        public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+                http
+                                .cors(Customizer.withDefaults())
+                                .csrf(AbstractHttpConfigurer::disable)
+                                .authorizeHttpRequests(auth -> auth
+                                                // Allow Swagger/OpenAPI endpoints
+                                                .requestMatchers(
+                                                                "/swagger-ui.html",
+                                                                "/swagger-ui/**",
+                                                                "/v3/api-docs/**")
+                                                .permitAll()
 
-                        // Public/webhook/download paths
-                        .requestMatchers(
-                                "/webhooks/**",
-                                "/files/public/**",
-                                "/files/download/**",
-                                "/public/**"
-                        ).permitAll()
+                                                // Public/webhook/download paths
+                                                .requestMatchers(
+                                                                "/webhooks/**",
+                                                                "/files/public/**",
+                                                                "/files/download/**",
+                                                                "/public/**")
+                                                .permitAll()
 
-                        // everything else requires auth
-                        .anyRequest().authenticated()
-                )
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                )
-                .addFilterBefore(clerkJwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                                                // everything else requires auth
+                                                .anyRequest().authenticated())
+                                .sessionManagement(session -> session
+                                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                                .addFilterBefore(clerkJwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
-        return http.build();
-    }
+                return http.build();
+        }
 
+        @Bean
+        public CorsFilter corsFilter() {
+                CorsConfiguration config = new CorsConfiguration();
 
-    @Bean
-    public CorsFilter corsFilter() {
-        CorsConfiguration config = new CorsConfiguration();
-        
-        // Allow localhost for development
-        config.setAllowedOrigins(List.of(
-                "http://localhost:5173",
-                "http://localhost:3000",
-                "http://localhost:8080",
-                "https://localhost:3000",
-                System.getenv("FRONTEND_URL") != null ? System.getenv("FRONTEND_URL") : "http://localhost:5173"
-        ));
-        
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "*"));
-        config.setExposedHeaders(List.of("Authorization"));
-        config.setAllowCredentials(true);
-        config.setMaxAge(3600L);
+                // Allow localhost for development
+                config.setAllowedOrigins(List.of(
+                                "http://localhost:5173",
+                                "http://localhost:3000",
+                                "http://localhost:8080",
+                                "https://localhost:3000",
+                                System.getenv("FRONTEND_URL") != null ? System.getenv("FRONTEND_URL")
+                                                : "http://localhost:5173"));
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
-        return new CorsFilter(source);
-    }
+                config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+                config.setAllowedHeaders(List.of("Authorization", "Content-Type", "*"));
+                config.setExposedHeaders(List.of("Authorization"));
+                config.setAllowCredentials(true);
+                config.setMaxAge(3600L);
+
+                UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+                source.registerCorsConfiguration("/**", config);
+                return new CorsFilter(source);
+        }
 }
