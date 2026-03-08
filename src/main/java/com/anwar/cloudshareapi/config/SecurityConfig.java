@@ -30,6 +30,10 @@ public class SecurityConfig {
                                 .cors(Customizer.withDefaults())
                                 .csrf(AbstractHttpConfigurer::disable)
                                 .authorizeHttpRequests(auth -> auth
+                                                // Health check endpoint
+                                                .requestMatchers("/health", "/health/**")
+                                                .permitAll()
+                                                
                                                 // Allow Swagger/OpenAPI endpoints
                                                 .requestMatchers(
                                                                 "/swagger-ui.html",
@@ -58,15 +62,18 @@ public class SecurityConfig {
         public CorsFilter corsFilter() {
                 CorsConfiguration config = new CorsConfiguration();
 
-                // Allow localhost for development
-                config.setAllowedOrigins(List.of(
+                // Allowed origins for development and production
+                String frontendUrl = System.getenv("FRONTEND_URL");
+                List<String> allowedOrigins = List.of(
                                 "http://localhost:5173",
                                 "http://localhost:3000",
                                 "http://localhost:8080",
                                 "https://localhost:3000",
-                                System.getenv("FRONTEND_URL") != null ? System.getenv("FRONTEND_URL")
-                                                : "http://localhost:5173"));
+                                "https://cloud-share-web-app.vercel.app",
+                                frontendUrl != null ? frontendUrl : "http://localhost:5173"
+                );
 
+                config.setAllowedOrigins(allowedOrigins);
                 config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
                 config.setAllowedHeaders(List.of("Authorization", "Content-Type", "*"));
                 config.setExposedHeaders(List.of("Authorization"));
