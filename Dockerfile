@@ -1,5 +1,4 @@
 # Multi-stage Dockerfile for Spring Boot 3.5.7 + Java 21
-# Production-grade setup for Render, Railway, Heroku, etc.
 
 # ===== STAGE 1: BUILD =====
 # Build the application in a Maven container

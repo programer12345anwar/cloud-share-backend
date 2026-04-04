@@ -40,7 +40,7 @@ public class SecurityConfig {
                                                 // Health check endpoint
                                                 .requestMatchers("/health", "/health/**")
                                                 .permitAll()
-                                                
+
                                                 // Allow Swagger/OpenAPI endpoints
                                                 .requestMatchers(
                                                                 "/swagger-ui.html",
@@ -77,8 +77,7 @@ public class SecurityConfig {
                                 "http://localhost:8080",
                                 "https://localhost:3000",
                                 "https://cloud-share-web-app.vercel.app",
-                                frontendUrl != null ? frontendUrl : "http://localhost:5173"
-                );
+                                frontendUrl != null ? frontendUrl : "http://localhost:5173");
 
                 config.setAllowedOrigins(allowedOrigins);
                 config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
