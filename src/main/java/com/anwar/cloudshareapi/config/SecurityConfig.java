@@ -71,17 +71,16 @@ public class SecurityConfig {
 
                 // Allowed origins for development and production
                 String frontendUrl = System.getenv("FRONTEND_URL");
-                List<String> allowedOrigins = List.of(
-                                "http://localhost:5173",
-                                "http://localhost:3000",
-                                "http://localhost:8080",
-                                "https://localhost:3000",
+                List<String> allowedOriginPatterns = List.of(
+                                "http://localhost:*",
+                                "https://localhost:*",
                                 "https://cloud-share-web-app.vercel.app",
+                                "https://*.vercel.app",
                                 frontendUrl != null ? frontendUrl : "http://localhost:5173");
 
-                config.setAllowedOrigins(allowedOrigins);
+                config.setAllowedOriginPatterns(allowedOriginPatterns);
                 config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-                config.setAllowedHeaders(List.of("Authorization", "Content-Type", "*"));
+                config.setAllowedHeaders(List.of("*"));
                 config.setExposedHeaders(List.of("Authorization"));
                 config.setAllowCredentials(true);
                 config.setMaxAge(3600L);

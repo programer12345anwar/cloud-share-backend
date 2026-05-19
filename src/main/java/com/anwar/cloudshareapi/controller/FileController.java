@@ -65,11 +65,11 @@ public class FileController {
 
     /**
      * Download file from Cloudinary
-     * Redirects to Cloudinary URL with proper disposition headers
+     * Redirects to Cloudinary secure URL with download attachment header
      * Cloudinary handles CDN distribution and bandwidth
      * 
-     * Note: Cloudinary URLs are directly downloadable
-     * Frontend can use the URL directly for downloads/streaming
+     * Returns HTTP 302 redirect to Cloudinary URL with fl_attachment flag
+     * This forces browser to download the file instead of opening it
      */
     @GetMapping("/download/{id}")
     public ResponseEntity<?> download(@PathVariable String id) throws IOException {
@@ -80,15 +80,15 @@ public class FileController {
                     .body(Map.of("error", "File URL not found"));
         }
 
-        // Return the Cloudinary URL with content disposition for download
-        // Frontend can then use this URL to download/stream the file
-        Map<String, Object> downloadResponse = new HashMap<>();
-        downloadResponse.put("downloadUrl", downloadableFile.getCloudinaryUrl());
-        downloadResponse.put("fileName", downloadableFile.getName());
-        downloadResponse.put("fileSize", downloadableFile.getSize());
-        downloadResponse.put("fileType", downloadableFile.getType());
+        // Add Cloudinary download flag to force attachment download
+        // Replace /upload/ with /upload/fl_attachment/ to add the attachment flag
+        String downloadUrl = downloadableFile.getCloudinaryUrl()
+                .replace("/upload/", "/upload/fl_attachment/");
 
-        return ResponseEntity.ok(downloadResponse);
+        // Redirect to the Cloudinary URL with attachment flag
+        return ResponseEntity.status(HttpStatus.FOUND)
+                .header("Location", downloadUrl)
+                .build();
     }
 
     /**

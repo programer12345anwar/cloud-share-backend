@@ -5,6 +5,8 @@ import com.anwar.cloudshareapi.document.ProfileDocument;
 import com.anwar.cloudshareapi.dto.FileMatadataDTO;
 import com.anwar.cloudshareapi.repository.FileMetadataRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -97,6 +99,13 @@ public class FileMatadataService {
      * Map document to DTO
      */
     private FileMatadataDTO mapToDTO(FileMetadataDocument fileMetadataDocument) {
+        String cloudinaryUrl = fileMetadataDocument.getCloudinaryUrl();
+        if ((cloudinaryUrl == null || cloudinaryUrl.isBlank())
+                && fileMetadataDocument.getFileLocation() != null
+                && !fileMetadataDocument.getFileLocation().isBlank()) {
+            cloudinaryUrl = fileMetadataDocument.getFileLocation();
+        }
+
         return FileMatadataDTO.builder()
                 .id(fileMetadataDocument.getId())
                 .fileLocation(fileMetadataDocument.getFileLocation())
@@ -106,7 +115,7 @@ public class FileMatadataService {
                 .clerkId(fileMetadataDocument.getClerkId())
                 .isPublic(fileMetadataDocument.getIsPublic())
                 .cloudinaryPublicId(fileMetadataDocument.getCloudinaryPublicId())
-                .cloudinaryUrl(fileMetadataDocument.getCloudinaryUrl())
+                .cloudinaryUrl(cloudinaryUrl)
                 .uploadedAt(fileMetadataDocument.getUploadedAt())
                 .build();
     }
@@ -127,8 +136,11 @@ public class FileMatadataService {
      */
     public FileMatadataDTO getPublicFile(String id) {
         Optional<FileMetadataDocument> fileOptional = fileMetadataRepository.findById(id);
-        if (fileOptional.isEmpty() || !fileOptional.get().getIsPublic()) {
-            throw new RuntimeException("Unable to get the file");
+        if (fileOptional.isEmpty()) {
+            throw new RuntimeException("File not found");
+        }
+        if (!Boolean.TRUE.equals(fileOptional.get().getIsPublic())) {
+            throw new RuntimeException("File is private");
         }
         FileMetadataDocument document = fileOptional.get();
         return mapToDTO(document);
@@ -140,7 +152,20 @@ public class FileMatadataService {
     public FileMatadataDTO getDownloadableFile(String id) {
         FileMetadataDocument file = fileMetadataRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("File not found"));
-        return mapToDTO(file);
+
+        if (Boolean.TRUE.equals(file.getIsPublic())) {
+            return mapToDTO(file);
+        }
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null
+                && authentication.isAuthenticated()
+                && authentication.getPrincipal() instanceof String
+                && file.getClerkId().equals(authentication.getPrincipal())) {
+            return mapToDTO(file);
+        }
+
+        throw new RuntimeException("File is private");
     }
 
     /**
@@ -179,8 +204,12 @@ public class FileMatadataService {
      * Toggle file public/private status
      */
     public FileMatadataDTO togglePublic(String id) {
+        ProfileDocument currentProfile = profileService.getCurrentProfile();
         FileMetadataDocument file = fileMetadataRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("File not found"));
+        if (!file.getClerkId().equals(currentProfile.getClerkId())) {
+            throw new RuntimeException("File does not belong to the current user");
+        }
         file.setIsPublic(!file.getIsPublic());
         fileMetadataRepository.save(file);
         return mapToDTO(file);
